@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <vector>
 using namespace std;
+// g++ 2.cpp -o 2 -fopenmp
 class Data
 {
     public:
