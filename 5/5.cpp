@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdlib>
 #include <string>
 #include <fstream>
 #include <streambuf>
@@ -24,6 +25,7 @@ int parse(vector<string>*data)
     } 
     else cout << "Failed to open file" << endl;       
     input_file.close(); //close the file object.
+    return 1;
 }
 
 
@@ -31,19 +33,14 @@ int parse(vector<string>*data)
 int find_seats(vector<string>* data, vector<short>* seats )
 {
     short highest_seat_id = 0;
+    #pragma omp parallel for
     for (int i = 0; i < data->size(); i++)
     {   
-        unsigned char row = 0;
-        for (char j = 0; j < 7; j++)
+        unsigned short seat_id = 0;
+        for (char j = 0; j < 10; j++)
         {
-            if (data->at(i).at(j) == 'B') row|= 1 << (6 -j); 
+            if ((data->at(i).at(j) == 'B') || (data->at(i).at(j) == 'R')) seat_id|= 1 << (9 -j); 
         }
-        unsigned char col = 0;
-        for (int j = 0; j < 3; j++)
-        {
-            if (data->at(i).at(j+7) == 'R') col|= 1 << (2 -j); 
-        }
-        short seat_id = row*8 + col;
         seats->at(i) = seat_id;
     }
     return 1;
@@ -53,6 +50,7 @@ bool sortfnc (short i,short j) { return i<j; }
 
 int find_my_seat(vector<short>* seats)
 {
+    #pragma omp parallel for
     for (int i = 0; i < seats->size()-1; i++)
     {
         if (((seats->at(i))+2) == (seats->at(i+1))) return seats->at(i) +1; 
@@ -77,4 +75,5 @@ int main()
     cout << seats.at(seats.size()-1) << endl;
     // Task 2
     cout << find_my_seat(&seats) << endl;
+    return EXIT_SUCCESS;
 }
