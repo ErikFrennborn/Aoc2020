@@ -2,3 +2,5 @@
 # Ignore all files without a filending
 *
 !*.*
+# Unignore all dirs
+!*/
