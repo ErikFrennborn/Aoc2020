@@ -4,22 +4,22 @@
 using namespace std;
 // g++ 7.cpp -o 7 -fopenmp
 
-int parse(DDMAP*data, vector<string>* lines)
+int parse(DDMAP*data)
 {
     fstream input_file;
+    vector<string> temp;
     input_file.open("data",ios::in); 
     if (input_file.is_open())
     {
         string tp;
         while(getline(input_file, tp))
         {
-            lines->push_back(tp);
+            temp.push_back(tp);
         }
     }
     else cout << "Failed to open file" << endl;       
     input_file.close(); //close the file object.
-    vector<vector<string>> temp_lines(lines->size());
-    vector<string> temp(*lines);
+    vector<vector<string>> temp_lines(temp.size());
     for (int i = 0; i < temp.size(); i++)
     {
         temp_lines.at(i) = vector<string>();
@@ -41,37 +41,45 @@ int parse(DDMAP*data, vector<string>* lines)
 int rerecursively_find(string bag,DDMAP* bags, set<string>* unique_bags)
 {
     vector<string> target_bags = bags->get_in(bag);
-    for (int i = 0; i < target_bags.size(); i++)
-    {
-        if (!(unique_bags->find(target_bags.at(i)) != unique_bags->end()))
+    transform(target_bags.rbegin(), target_bags.rend(),target_bags.rbegin(),([bags,unique_bags](string bag) {
+        if (!(unique_bags->find(bag) != unique_bags->end()))
         {
-            unique_bags->insert(target_bags.at(i));
-            rerecursively_find(target_bags.at(i),bags,unique_bags);
+            unique_bags->insert(bag);
+            rerecursively_find(bag,bags,unique_bags);
         }
-    }
+        return 1;
+    }));
 }
 
-
+int add(int a, int b)
+{
+    return a+b;
+}
+int test(tuple<string,int> x){ return get<1>(x);}
 int rerecursively_count(string bag,DDMAP* bags)
 {
     vector<tuple<string,int>> target_bags = bags->get_content(bag);
     int count = 0;
-    for (int i = 0; i < target_bags.size(); i++)
-    {
-        if (target_bags.size() != 0)
-        {
-            count += get<1>(target_bags.at(i)) * rerecursively_count(get<0>(target_bags.at(i)),bags);
-        }
-    }
+    if (target_bags.size() == 0) return 0;
+    mapreduce(&count, &target_bags, add, test);
+    // [bags](tuple<string, int> x) {
+    //     return get<1>(x) * rerecursively_count(get<0>(x),bags);
+    //  });
+    // for (int i = 0; i < target_bags.size(); i++)
+    // {
+    //     if (target_bags.size() != 0)
+    //     {
+    //         count += get<1>(target_bags.at(i)) * rerecursively_count(get<0>(target_bags.at(i)),bags);
+    //     }
+    // }
     return count +1 ;
 }
 
 int main()
 {
     // Set up
-    vector<string>lines;
     DDMAP data;
-    parse(&data, &lines);
+    parse(&data);
     
     // Task 1
     set<string> unique_bags;
@@ -82,5 +90,4 @@ int main()
     int count = rerecursively_count("shiny gold", &data);
     // -1 to not count shiny gold bag
     cout << "Task 2 : " << count - 1 << endl;
-
 }
