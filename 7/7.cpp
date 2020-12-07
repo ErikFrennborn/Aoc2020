@@ -1,44 +1,8 @@
-#include <cstdlib>
-#include <iterator>
+#include "../lib/utils.hpp"
+#include <functional>
 #include <string>
-#include <fstream>
-#include <streambuf>
-#include <tuple>
-#include <vector>
-#include <bits/stdc++.h>
-#include <iostream>
-#include <omp.h>
 using namespace std;
 // g++ 7.cpp -o 7 -fopenmp
-
-class DDMAP
-{
-    map<string,vector<tuple<string,int>>> content; // bag -> contain (name, amount)
-    map<string,vector<string>> in; // bag -> need in bag
-    public:
-    void insert(string bag,int amount, string content_bag)
-    {
-        this->in[content_bag].push_back(bag);
-        this->content[bag].push_back(tuple<string,int>(content_bag,amount));
-    } 
-    int size() {return  this->content.size();}
-    vector<tuple<string,int>> get_content(string bag) { return  this->content[bag];}
-    vector<string> get_in(string bag) { return  this->in[bag];}
-};
-
-int split(string* input, vector<string>* output, string delimiter)
-{
-    size_t pos = 0;
-    std::string token;  
-    while ((pos = input->find(delimiter)) != std::string::npos)
-    {
-        token = input->substr(0, pos);
-        output->push_back(token);
-        input->erase(0, pos + delimiter.length());
-    }
-    output->push_back(input->data());
-}
-
 
 int parse(DDMAP*data, vector<string>* lines)
 {
