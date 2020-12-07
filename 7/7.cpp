@@ -11,22 +11,20 @@
 using namespace std;
 // g++ 7.cpp -o 7 -fopenmp
 
-int parse(vector<string>*data)
+class DDMAP
 {
-    fstream input_file;
-    input_file.open("data",ios::in); 
-    if (input_file.is_open())
+    map<string,vector<tuple<string,int>>> content; // bag -> contain (name, amount)
+    map<string,vector<string>> in; // bag -> need in bag
+    public:
+    void insert(string bag,int amount, string content_bag)
     {
-        string tp;
-        while(getline(input_file, tp))
-        {
-            data->push_back(tp);
-        }
+        this->in[content_bag].push_back(bag);
+        this->content[bag].push_back(tuple<string,int>(content_bag,amount));
     } 
-    else cout << "Failed to open file" << endl;       
-    input_file.close(); //close the file object.
-    return 1;
-}
+    int size() {return  this->content.size();}
+    vector<tuple<string,int>> get_content(string bag) { return  this->content[bag];}
+    vector<string> get_in(string bag) { return  this->in[bag];}
+};
 
 int split(string* input, vector<string>* output, string delimiter)
 {
@@ -41,9 +39,44 @@ int split(string* input, vector<string>* output, string delimiter)
     output->push_back(input->data());
 }
 
-int rerecursively_find(string bag,map<string,vector<string>>* bags, set<string>* unique_bags)
+
+int parse(DDMAP*data, vector<string>* lines)
 {
-    vector<string> target_bags = (*bags)[bag];
+    fstream input_file;
+    input_file.open("data",ios::in); 
+    if (input_file.is_open())
+    {
+        string tp;
+        while(getline(input_file, tp))
+        {
+            lines->push_back(tp);
+        }
+    }
+    else cout << "Failed to open file" << endl;       
+    input_file.close(); //close the file object.
+    vector<vector<string>> temp_lines(lines->size());
+    vector<string> temp(*lines);
+    for (int i = 0; i < temp.size(); i++)
+    {
+        temp_lines.at(i) = vector<string>();
+        split(&temp.at(i), &temp_lines.at(i), " ");
+    }
+    // Create hashmap
+    map<string,vector<string>> bags;
+    for (int i = 0; i < temp_lines.size(); i++)
+    {
+        string bag = temp_lines.at(i).at(0) + " " + temp_lines.at(i).at(1);
+        for (int j = 0; j < (temp_lines.at(i).size()-4)/4; j++)
+        {
+            data->insert((temp_lines.at(i).at(0) + " " + temp_lines.at(i).at(1)), (atoi(temp_lines.at(i).at(j*4+4).c_str())), (temp_lines.at(i).at(j*4+5) + " " + temp_lines.at(i).at(j*4+6)) );
+        }
+    }
+    return 1;
+}
+
+int rerecursively_find(string bag,DDMAP* bags, set<string>* unique_bags)
+{
+    vector<string> target_bags = bags->get_in(bag);
     for (int i = 0; i < target_bags.size(); i++)
     {
         if (!(unique_bags->find(target_bags.at(i)) != unique_bags->end()))
@@ -54,44 +87,10 @@ int rerecursively_find(string bag,map<string,vector<string>>* bags, set<string>*
     }
 }
 
-int task_1(vector<string>*data)
-{  
-    vector<vector<string>> data2(data->size());
-    vector<string> temp(*data);
-    for (int i = 0; i < temp.size(); i++)
-    {
-        data2.at(i) = vector<string>();
-        split(&temp.at(i), &data2.at(i), " ");
-    }
-    // Create hashmap
-    map<string,vector<string>> bags;
-    for (int i = 0; i < data2.size(); i++)
-    {
-        string bag = data2.at(i).at(0) + " " + data2.at(i).at(1);
-        for (int j = 0; j < (data2.at(i).size()-4)/4; j++)
-        {
-            bags[data2.at(i).at(j*4+5) + " " + data2.at(i).at(j*4+6)].push_back(bag);
-        }
-    }
-    // Find which bag gold can be place, and then find which these bag can be placed in
-    set<string> unique_bags;
-    for (int i = 0; i < data->size(); i++)
-    {
-        size_t contains = data->at(i).find("contain");
-        size_t found = data->at(i).find("shiny gold", contains);
-        if (found != string::npos)
-        {
-            string bag = data2.at(i).at(0) + " " + data2.at(i).at(1);
-            unique_bags.insert(bag);
-            rerecursively_find(bag, &bags, &unique_bags);
-        }
-    }
-    return unique_bags.size();
-}
 
-int rerecursively_count(string bag,map<string,vector<tuple<string,int>>>* bags)
+int rerecursively_count(string bag,DDMAP* bags)
 {
-    vector<tuple<string,int>> target_bags = (*bags)[bag];
+    vector<tuple<string,int>> target_bags = bags->get_content(bag);
     int count = 0;
     for (int i = 0; i < target_bags.size(); i++)
     {
@@ -103,45 +102,21 @@ int rerecursively_count(string bag,map<string,vector<tuple<string,int>>>* bags)
     return count +1 ;
 }
 
-int task_2(vector<string>*data)
-{  
-    vector<vector<string>> data2(data->size());
-    vector<string> temp(*data);
-    for (int i = 0; i < temp.size(); i++)
-    {
-        data2.at(i) = vector<string>();
-        split(&temp.at(i), &data2.at(i), " ");
-    }
-    // Create hashmap
-    map<string,vector<tuple<string,int>>> bags;
-    for (int i = 0; i < data2.size(); i++)
-    {
-        string bag = data2.at(i).at(0) + " " + data2.at(i).at(1);
-        for (int j = 0; j < (data2.at(i).size()-4)/4; j++)
-        {
-            bags[bag].push_back( tuple<string, int>( (data2.at(i).at(j*4+5) + " " + data2.at(i).at(j*4+6)), (atoi(data2.at(i).at(j*4+4).c_str())) ));
-        }
-    }
-    // Find which bag gold can be place, and then find which these bag can be placed in
-    int count = 0;
-    for (int i = 0; i < data->size(); i++)
-    {
-        string bag = data2.at(i).at(0) + " " + data2.at(i).at(1);
-        if ("shiny gold" == bag)
-        {
-            count = rerecursively_count(bag, &bags);
-            break;
-        }
-    }
-    // -1 to not count shiny gold bag
-    return count - 1;
-}
-
 int main()
 {
-    vector<string>data;
-    parse(&data);
-    cout << task_1(&data) << endl;
-    cout << task_2(&data) << endl;
+    // Set up
+    vector<string>lines;
+    DDMAP data;
+    parse(&data, &lines);
+    
+    // Task 1
+    set<string> unique_bags;
+    rerecursively_find("shiny gold", &data, &unique_bags);
+    cout << "Task 1: " << unique_bags.size() << endl;
+
+    // Task 2
+    int count = rerecursively_count("shiny gold", &data);
+    // -1 to not count shiny gold bag
+    cout << "Task 2 : " << count - 1 << endl;
 
 }
