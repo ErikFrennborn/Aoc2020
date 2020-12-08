@@ -2,47 +2,90 @@
 #include <algorithm>
 #include <array>
 #include <cstdlib>
+#include <iostream>
 #include <set>
 #include <tuple>
 #include <vector>
 
-// This args list is a bit longer than I would have wanted but not sure it worth the effert to fix
-tuple<int, int> wm( vector<tuple<char, int>>* program, bool can_branch, set<tuple<int, int>>* alt_programs, int _pc, int _acc, set<int>* _seen_pcs)
+class State
 {
-    // Problem variables
-    set<int> seen_pcs =*_seen_pcs;
-    
-    // Setting up vm
-    int pc = _pc;
-    int acc = _acc;
+    public:
+        // Pointers to common data
+        vector<tuple<char, int>>* program;
+        set<tuple<int, int>>* alt_programs;
+        
+        // Pointer to clone data
+        set<int>* seen_pcs; 
+        
+        // Primitives
+        bool can_branch; 
+        int pc;
+        int acc;
 
+        // can_branch & seen_pcs isn't really a bit of machine state but it's convintet to pack it in here
+
+        State(vector<tuple<char, int>>* program, set<tuple<int, int>>* alt_programs, bool can_branch)
+        {
+            this->program = program;
+            this->alt_programs = alt_programs;
+
+            this->seen_pcs = new set<int>(); 
+            
+            this->can_branch = can_branch;
+            this->pc = 0;
+            this->acc = 0;
+        }
+        ~State()
+        {  
+            // Clean up
+            this->seen_pcs->~set();
+        }
+        State* branch(int pc, int acc)
+        {
+            State* state = new State(
+                this->program,
+                this->alt_programs,
+                false);
+            
+            state->seen_pcs = new set<int>(*this->seen_pcs);
+            state->pc = pc;
+            state->acc = acc;
+            return state;
+        }
+};
+
+// This args list is a bit longer than I would have wanted but not sure it worth the effert to fix
+tuple<int, int> wm(State* state)
+{
     // run vm
     while (true)
     {
         // Seen we don't have conditional branches, if we the same pc twice we are stuck in inf loop
-        if (seen_pcs.count(pc)) return tuple<int, int>(EXIT_FAILURE,acc);
-        if (pc >= program->size()) return tuple<int, int>(EXIT_SUCCESS,acc);
-        seen_pcs.insert(pc);
-        tuple<char, int> op = program->at(pc);
+        if (state->seen_pcs->count(state->pc)) return tuple<int, int>(EXIT_FAILURE,state->acc);
+        if (state->pc >= state->program->size()) return tuple<int, int>(EXIT_SUCCESS,state->acc);
+        state->seen_pcs->insert(state->pc);
+        tuple<char, int> op = state->program->at(state->pc);
         switch(get<0>(op))
         {
             case (0):
-                if (can_branch)
+                if (state->can_branch)
                 {
-                    alt_programs->insert(wm(program,false,alt_programs,pc + get<1>(op),acc, &seen_pcs));
+                    State* branch_state = state->branch(state->pc + get<1>(op),state->acc);
+                    state->alt_programs->insert(wm(branch_state));
                 }
-                pc++;
+                state->pc++;
                 break;
             case (1):
-                acc += get<1>(op);
-                pc++;
+                state->acc += get<1>(op);
+                state->pc++;
                 break;
             case (2):
-                if (can_branch)
+                if (state->can_branch)
                 {
-                    alt_programs->insert(wm(program,false,alt_programs,pc + 1,acc, &seen_pcs));
+                    State* branch_state = state->branch(state->pc + 1,state->acc);
+                    state->alt_programs->insert(wm(branch_state));
                 }
-                pc += get<1>(op);
+                state->pc += get<1>(op);
                 break;
             default:
                 cout << "Invalid opcode: " << +get<0>(op) << endl;
@@ -58,10 +101,9 @@ int main()
     parse(&data);
     set<tuple<int, int>> alt_programs;
     vector<tuple<char, int>> program(data.size());
-    set<int> seen_pcs;
     
     // Parse ISA, packing in to a more machine readable state
-    transform(data.rbegin(),data.rend(),program.rbegin(), [](string x) {
+    transform(data.begin(),data.end(),program.begin(), [](string x) {
         size_t space = x.find(" ");
         string op = x.substr(0, space);
         char opcode;
@@ -73,7 +115,8 @@ int main()
         return tuple<char,int>(opcode,arg);
     });
     // Task 1 & 2
-    tuple<int, int> result = wm(&program,true,&alt_programs,0,0, &seen_pcs);
+    State* init_state = new State(&program, &alt_programs,true);
+    tuple<int, int> result = wm(init_state);
     // Task 1
     cout << get<1>(result) << endl;
 
