@@ -41,6 +41,7 @@ int replace_string(string* str, string find, string replace);
 template <typename A, typename B> 
 void mapreduce(B* result,vector<A>* vector, B (*reduce_func)(B, B), B(*map_func) (A) );
 
+int parse(vector<string>*data);
 
 
 

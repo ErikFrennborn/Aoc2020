@@ -24,6 +24,24 @@ int replace_string(string* str, string find, string replace)
     return 1;
 }
 
+int parse(vector<string>*data)
+{
+    fstream input_file;
+    input_file.open("data",ios::in); 
+    if (input_file.is_open())
+    {
+        string tp;
+        while(getline(input_file, tp))
+        {
+            data->push_back(tp);
+        }
+    } 
+    else cout << "Failed to open file" << endl;       
+    input_file.close(); //close the file object.
+    return 1;
+}
+
+
 
 template <typename A, typename B> 
 void mapreduce(B* result,vector<A>* vector, B (*reduce_func)(B, B), B(*map_func) (A) )
