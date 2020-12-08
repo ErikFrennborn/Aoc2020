@@ -2,10 +2,9 @@
 #include <algorithm>
 #include <array>
 #include <cstdlib>
-#include <iostream>
-#include <set>
-#include <tuple>
 #include <vector>
+#include <thread>
+#include <mutex>
 
 class State
 {
@@ -13,6 +12,8 @@ class State
         // Pointers to common data
         vector<tuple<char, int>>* program;
         set<tuple<int, int>>* alt_programs;
+        vector<thread*>* threads;
+        mutex* lock;
         
         // Pointer to clone data
         set<int>* seen_pcs; 
@@ -22,15 +23,17 @@ class State
         int pc;
         int acc;
 
-        // can_branch & seen_pcs isn't really a bit of machine state but it's convintet to pack it in here
+        // can_branch, seen_pcs, threads, & lock isn't really a bit of machine state but it's convintet to pack it in here
 
-        State(vector<tuple<char, int>>* program, set<tuple<int, int>>* alt_programs, bool can_branch)
+        State(vector<tuple<char, int>>* program, set<tuple<int, int>>* alt_programs, bool can_branch, vector<thread*>* threads, mutex* lock)
         {
             this->program = program;
             this->alt_programs = alt_programs;
+            this->threads = threads;
+            this->lock = lock;
 
             this->seen_pcs = new set<int>(); 
-            
+
             this->can_branch = can_branch;
             this->pc = 0;
             this->acc = 0;
@@ -45,7 +48,9 @@ class State
             State* state = new State(
                 this->program,
                 this->alt_programs,
-                false);
+                false,
+                this->threads,
+                this->lock);
             
             state->seen_pcs = new set<int>(*this->seen_pcs);
             state->pc = pc;
@@ -61,8 +66,20 @@ tuple<int, int> wm(State* state)
     while (true)
     {
         // Seen we don't have conditional branches, if we the same pc twice we are stuck in inf loop
-        if (state->seen_pcs->count(state->pc)) return tuple<int, int>(EXIT_FAILURE,state->acc);
-        if (state->pc >= state->program->size()) return tuple<int, int>(EXIT_SUCCESS,state->acc);
+        if (state->seen_pcs->count(state->pc)){ 
+            state->lock->lock();
+            state->alt_programs->insert(tuple<int, int>(EXIT_FAILURE,state->acc)); 
+            state->lock->unlock();
+            return(tuple<int, int>(EXIT_FAILURE,state->acc));
+        }
+
+        if (state->pc >= state->program->size()) {
+            state->lock->lock();
+            state->alt_programs->insert(tuple<int, int>(EXIT_SUCCESS,state->acc));
+            state->lock->unlock();
+            return(tuple<int, int>(EXIT_SUCCESS,state->acc));
+        }
+        
         state->seen_pcs->insert(state->pc);
         tuple<char, int> op = state->program->at(state->pc);
         switch(get<0>(op))
@@ -71,7 +88,9 @@ tuple<int, int> wm(State* state)
                 if (state->can_branch)
                 {
                     State* branch_state = state->branch(state->pc + get<1>(op),state->acc);
-                    state->alt_programs->insert(wm(branch_state));
+                    state->lock->lock();
+                    state->threads->emplace_back(new thread(wm,branch_state));
+                    state->lock->unlock();
                 }
                 state->pc++;
                 break;
@@ -83,7 +102,9 @@ tuple<int, int> wm(State* state)
                 if (state->can_branch)
                 {
                     State* branch_state = state->branch(state->pc + 1,state->acc);
-                    state->alt_programs->insert(wm(branch_state));
+                    state->lock->lock();
+                    state->threads->emplace_back(new thread(wm,branch_state));
+                    state->lock->unlock();
                 }
                 state->pc += get<1>(op);
                 break;
@@ -92,7 +113,6 @@ tuple<int, int> wm(State* state)
                 exit(EXIT_FAILURE);
         }
     }
-    // We can ignore the result of oringal program, for task 2 since we know it will fail
 }
 int main()
 {
@@ -101,7 +121,9 @@ int main()
     parse(&data);
     set<tuple<int, int>> alt_programs;
     vector<tuple<char, int>> program(data.size());
-    
+    vector<thread*> threads;
+    mutex lock;
+
     // Parse ISA, packing in to a more machine readable state
     transform(data.begin(),data.end(),program.begin(), [](string x) {
         size_t space = x.find(" ");
@@ -115,11 +137,16 @@ int main()
         return tuple<char,int>(opcode,arg);
     });
     // Task 1 & 2
-    State* init_state = new State(&program, &alt_programs,true);
-    tuple<int, int> result = wm(init_state);
+    State* init_state = new State(&program, &alt_programs,true, &threads, &lock);
+    tuple<int,int> result = wm(init_state);
     // Task 1
     cout << get<1>(result) << endl;
+    
 
+    for (int i = 0; i < init_state->threads->size(); i++)
+    {
+        init_state->threads->at(i)->join();
+    }
     // Task 2
     for (set<tuple<int, int>>::iterator state = alt_programs.begin(); state != alt_programs.end(); state++) {
         if (!get<0>(*state))
