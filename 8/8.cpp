@@ -6,6 +6,13 @@
 #include <thread>
 #include <mutex>
 
+/* The performance got worse in the threaded version, I believe this is mainly because of the context switching
+ * and waiting for the lock. I think we can improve performance by crating courser grain by using thread pool where
+ * each theard picks jobs from a job queue and execute local insert into this local alt_programs, only merge alt_program
+ * with the global alt_programs when all task are compete. In conjunction with this we could make the execution more
+ * courser grain by only createing a new task for the "oringal" execute path (aka the on with no modifations), thereby
+ * lower the amount of overhead. I probably won't implemtent this because lack of time. 
+ */
 class State
 {
     public:
