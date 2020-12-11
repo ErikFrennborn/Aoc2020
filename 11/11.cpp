@@ -77,67 +77,51 @@ char task_adj_2(vector<vector<char>>* input, int i, int j)
     return adj;
 }
 
-int sim(vector<vector<char>>* input, vector<vector<char>>* output, int tolerane )
-{
-    bool stable = true;
-    int occupied = 0;
-
-    for (int i = 0; i < input->size(); i++)
-    {
-        for (int j = 0; j < input->at(0).size();j++)
-        {
-           
-            if (input->at(i).at(j) == 0) continue;
-            char adj = task_adj_2(input, i, j);
-            if (input->at(i).at(j) == 1)
-            {
-                if (adj == 0)
-                {
-                    occupied++;
-                    output->at(i).at(j) = 2;
-                    stable = false;
-                }
-                else output ->at(i).at(j) = 1;
-            }
-            else if (input->at(i).at(j) == 2)
-            {
-                occupied ++;
-                if(adj >= tolerane)
-                {
-                    occupied--;
-                    output->at(i).at(j) = 1;
-                    stable = false;
-                } 
-                else output->at(i).at(j) = 2;
-
-            }
-        }
-    }
-    for (int i = 0; i< output->size(); i++)
-    {
-        for (int j = 0; j < output->at(0).size(); j++)
-        {
-            cout << + output->at(i).at(j);
-        }
-        cout <<endl;
-    }
-    cout << endl;
-    if (stable) return occupied;
-    return 0;   
-}
-
-int task_1(vector<vector<char>>* data)
+int task_1(vector<vector<char>>* data, char(*adj_funk) (vector<vector<char>>*, int , int), int tolerane)
 {
     vector<vector<char>> temp1(*data);
     vector<vector<char>> temp2(data->size(), vector<char>(data->at(0).size()));
     vector<vector<char>>* input_ptr = &temp1;
     vector<vector<char>>* output_ptr = &temp2;
     vector<vector<char>>* temp_ptr;
+    bool stable = false;
     int occupied = 0;
     while(true)
     {
-        occupied = sim(input_ptr,output_ptr,5);
-        if (occupied != 0) return occupied;
+        occupied = 0;
+        stable = true;
+        for (int i = 0; i < input_ptr->size(); i++)
+        {
+            for (int j = 0; j < input_ptr->at(0).size();j++)
+            {
+            
+                if (input_ptr->at(i).at(j) == 0) continue;
+                char adj = adj_funk(input_ptr, i, j);
+                if (input_ptr->at(i).at(j) == 1)
+                {
+                    if (adj == 0)
+                    {
+                        occupied++;
+                        output_ptr->at(i).at(j) = 2;
+                        stable = false;
+                    }
+                    else output_ptr->at(i).at(j) = 1;
+                }
+                else if (input_ptr->at(i).at(j) == 2)
+                {
+                    occupied ++;
+                    if(adj >= tolerane)
+                    {
+                        occupied--;
+                        output_ptr->at(i).at(j) = 1;
+                        stable = false;
+                    } 
+                    else output_ptr->at(i).at(j) = 2;
+
+                }
+            }
+        }
+        if (stable) break;
         temp_ptr = input_ptr;
         input_ptr = output_ptr;
         output_ptr = temp_ptr;
@@ -150,6 +134,7 @@ int main()
     vector<string> temp;
     parse(&temp);
     vector<vector<char>> data(temp.size());
+    // Repack to avoid strings, even if list of char and string is that same thing. Vector are just nice to dea with
     for (int i = 0; i < temp.size();i ++)
     {
         for (int j = 0; j < temp.at(i).length(); j++)
@@ -158,6 +143,7 @@ int main()
         }
     }
     // temp.~vector();
-    cout << task_1(&data) << endl;
+    cout << task_1(&data, task_adj_1,4) << endl;
+    cout << task_1(&data, task_adj_2,5) << endl;
 
 }
