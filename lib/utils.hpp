@@ -36,6 +36,7 @@ class DDMAP
 
 // Helper function strings
 int split(string* input, vector<string>* output, string delimiter);
+int split_to_int(string* input, vector<int>* output, string delimiter);
 int replace_string(string* str, string find, string replace);
 
 template <typename A, typename B> 

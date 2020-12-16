@@ -4,3 +4,8 @@
 !*.*
 # Unignore all dirs
 !*/
+# Compiler
+*.o
+*.d
+# Profiling
+*.data
